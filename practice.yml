@@ -1,0 +1,62 @@
+---
+- hosts: localhost
+  become: true
+
+  tasks:
+    - name: Ставим zsh, wget
+      apt:
+        name:
+          - wget
+          - zsh
+          - nginx
+        state: latest
+
+    - name: Создаем новую директорию /var/www/
+      file:
+        path: /var/www/localhost
+        state: directory
+        mode: '0775'
+        owner: root
+        group: sudo
+
+    - name: Удаляем дефолт конфиг nginx
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: Клонируем из git в /var/www/ очень простую web страничку "Under construction"
+      ansible.builtin.git:
+        repo: 'https://github.com/dkkaygorodov/ansible_practice.git'
+        dest: /var/www/localhost
+        clone: yes
+        update: yes
+
+    - name: Настраиваем в sysctl параметр fs.files-max в 1204000
+      sysctl:
+        name: fs.file-max
+        value: '1204000'
+        reload: no
+
+    - name: Настраиваем в sysctl параметр somaxconn в 65535
+      sysctl:
+        name: net.core.somaxconn
+        value: '65535'
+        reload: no
+
+    - name: Прописывает на этой машинке 1 ssh ключ в /root
+      authorized_key:
+        user: root
+        state: absent
+        manage_dir: yes
+        key: "{{ item }}"
+      with_fileglob:
+      - /root/id_rsa_number_one.pub
+
+    - name: Прописывает на этой машинке 2 ssh ключ в /root
+      authorized_key:
+        user: root
+        state: absent
+        manage_dir: yes
+        key: "{{ item }}"
+      with_fileglob:
+      - /root/id_rsa_number_two.pub
